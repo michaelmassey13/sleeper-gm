@@ -37,10 +37,10 @@ GM.model = (() => {
 
   /**
    * Build the player table from several weeks of projections.
-   * Each player gets wk[week] (league points), opp[week], now (target week, injury-adjusted)
-   * and avg (mean over the horizon, byes count as zero).
+   * Each player gets wk[week] (league points), opp[week], now (target week, injury-adjusted),
+   * avg (mean over the first `horizon` weeks, byes count as zero) and rosRaw (same, over every week loaded).
    */
-  function buildPlayers(projWeeks, scoring, targetWeek) {
+  function buildPlayers(projWeeks, scoring, targetWeek, horizon) {
     const map = new Map();
     for (const { week, rows } of projWeeks) {
       for (const r of rows) {
@@ -69,6 +69,7 @@ GM.model = (() => {
       }
     }
     const weeks = projWeeks.map((w) => w.week);
+    const mean = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
     for (const p of map.values()) {
       for (const w of weeks) if (p.wk[w] == null) p.wk[w] = 0;
       let now = p.wk[targetWeek] || 0;
@@ -76,18 +77,32 @@ GM.model = (() => {
       else if (p.inj === 'Doubtful') now *= 0.3;
       p.now = now;
       p.bye = !p.opp[targetWeek];
-      const series = weeks.map((w) => (w === targetWeek ? now : p.wk[w]));
-      p.avg = series.reduce((a, b) => a + b, 0) / series.length;
+      p.series = weeks.map((w) => (w === targetWeek ? now : p.wk[w]));
+      p.avg = mean(p.series.slice(0, horizon));
+      p.rosRaw = mean(p.series);
       // Weekly output when healthy and playing; ignores byes and short injuries.
       const playing = weeks.map((w) => p.wk[w]).filter((v) => v > 0);
-      p.talent = playing.length ? playing.reduce((a, b) => a + b, 0) / playing.length : 0;
+      p.talent = mean(playing);
     }
     return map;
   }
 
+  /**
+   * Rest-of-season points per week for trades. A week the player misses (injury or bye)
+   * is filled by a replacement-level player at his position, since that's what a manager
+   * would start instead. A short absence then only costs the gap to a waiver pickup.
+   */
+  function setRestOfSeason(players, replRos) {
+    for (const p of players.values()) {
+      if (p.unknown) continue;
+      const fill = replRos[p.pos] || 0;
+      p.ros = p.series.length ? p.series.reduce((a, v) => a + (v > 0 ? v : fill), 0) / p.series.length : 0;
+    }
+  }
+
   // Placeholder for rostered players the projection feed doesn't cover (deep IR, practice squad).
   function unknownPlayer(id) {
-    return { id, name: `Player ${id}`, short: `#${id}`, pos: '?', elig: [], team: null, inj: null, wk: {}, opp: {}, now: 0, avg: 0, talent: 0, unknown: true };
+    return { id, name: `Player ${id}`, short: `#${id}`, pos: '?', elig: [], team: null, inj: null, wk: {}, opp: {}, series: [], now: 0, avg: 0, rosRaw: 0, ros: 0, talent: 0, unknown: true };
   }
 
   /**
@@ -134,20 +149,20 @@ GM.model = (() => {
    * from the whole player pool; the best player left over at each position is "replacement".
    * In 2-QB and superflex leagues this pushes QB replacement deep, which raises QB value.
    */
-  function replacementLevels(players, slots, nTeams) {
+  function replacementLevels(players, slots, nTeams, metric = 'avg') {
     const all = [...players.keys()];
     const leagueSlots = slots.flatMap((s) => Array(nTeams).fill(s));
-    const { used } = optimize(all, leagueSlots, players, 'avg');
+    const { used } = optimize(all, leagueSlots, players, metric);
     const repl = {};
     for (const pos of POSITIONS) {
       let best = 0;
       for (const p of players.values()) {
-        if (p.pos === pos && !used.has(p.id) && p.avg > best) best = p.avg;
+        if (p.pos === pos && !used.has(p.id) && p[metric] > best) best = p[metric];
       }
       repl[pos] = best;
     }
     return repl;
   }
 
-  return { ELIG, POSITIONS, SIDELINED, starterSlots, slotLabel, points, buildPlayers, unknownPlayer, optimize, lineupTotal, replacementLevels };
+  return { ELIG, POSITIONS, SIDELINED, starterSlots, slotLabel, points, buildPlayers, setRestOfSeason, unknownPlayer, optimize, lineupTotal, replacementLevels };
 })();

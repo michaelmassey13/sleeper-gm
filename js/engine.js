@@ -11,11 +11,14 @@ GM.engine = (() => {
     const api = GM.api;
     const [league, users, rosters] = await Promise.all([api.league(leagueId), api.users(leagueId), api.rosters(leagueId)]);
     const season = league.season;
-    const weeks = [];
-    for (let w = targetWeek; w <= Math.min(targetWeek + HORIZON - 1, LAST_REG_WEEK); w++) weeks.push(w);
+    // Load every remaining regular-season week: the first HORIZON drive lineups and waivers,
+    // the full run drives trade values.
+    const rosWeeks = [];
+    for (let w = targetWeek; w <= LAST_REG_WEEK; w++) rosWeeks.push(w);
+    const weeks = rosWeeks.slice(0, HORIZON);
 
     const [projRows, matchups, trendAdd, trendDrop] = await Promise.all([
-      Promise.all(weeks.map((w) => api.projections(season, w).then((rows) => ({ week: w, rows })))),
+      Promise.all(rosWeeks.map((w) => api.projections(season, w).then((rows) => ({ week: w, rows })))),
       api.matchups(leagueId, targetWeek).catch(() => []),
       api.trending('add').catch(() => []),
       api.trending('drop').catch(() => []),
@@ -23,7 +26,7 @@ GM.engine = (() => {
 
     const scoring = league.scoring_settings;
     const slots = M.starterSlots(league.roster_positions);
-    const players = M.buildPlayers(projRows, scoring, targetWeek);
+    const players = M.buildPlayers(projRows, scoring, targetWeek, HORIZON);
     const userById = new Map(users.map((u) => [u.user_id, u]));
     const matchupByRoster = new Map(matchups.map((m) => [m.roster_id, m]));
 
@@ -55,10 +58,12 @@ GM.engine = (() => {
     });
 
     const repl = M.replacementLevels(players, slots, teams.length);
+    const replRos = M.replacementLevels(players, slots, teams.length, 'rosRaw');
+    M.setRestOfSeason(players, replRos);
     const rosterSize = league.roster_positions.filter((s) => s !== 'IR' && s !== 'TAXI').length;
 
     return {
-      league, season, targetWeek, weeks, scoring, slots, players, teams, rosteredBy, repl, rosterSize,
+      league, season, targetWeek, weeks, rosWeeks, scoring, slots, players, teams, rosteredBy, repl, replRos, rosterSize,
       nflWeek: nflState.week,
       trendAdd: new Map(trendAdd.map((t) => [t.player_id, t.count])),
       trendDrop: new Map(trendDrop.map((t) => [t.player_id, t.count])),
@@ -72,8 +77,11 @@ GM.engine = (() => {
 
   /** Points above replacement per week, over the horizon. */
   const vor = (ctx, p) => (p.unknown ? 0 : p.avg - (ctx.repl[p.pos] || 0));
-  /** Trade value: points above replacement, plus a little credit for raw volume so depth isn't worth zero. */
-  const tradeValue = (ctx, p) => Math.max(0, vor(ctx, p)) + 0.1 * p.avg;
+  /**
+   * Trade value: rest-of-season points per week above replacement, plus a little credit
+   * for raw volume so depth isn't worth zero. Missed weeks are already filled at replacement level in p.ros.
+   */
+  const tradeValue = (ctx, p) => (p.unknown ? 0 : Math.max(0, p.ros - (ctx.replRos[p.pos] || 0)) + 0.1 * p.rosRaw);
 
   /* ---------------- Lineup ---------------- */
 
@@ -187,8 +195,8 @@ GM.engine = (() => {
     const meAfter = meIds.filter((id) => !giveSet.has(id)).concat(get);
     const otherAfter = otherIds.filter((id) => !getSet.has(id)).concat(give);
     const S = ctx.slots, PL = ctx.players;
-    const gMe = M.lineupTotal(meAfter, S, PL, 'avg') - M.lineupTotal(meIds, S, PL, 'avg');
-    const gThem = M.lineupTotal(otherAfter, S, PL, 'avg') - M.lineupTotal(otherIds, S, PL, 'avg');
+    const gMe = M.lineupTotal(meAfter, S, PL, 'ros') - M.lineupTotal(meIds, S, PL, 'ros');
+    const gThem = M.lineupTotal(otherAfter, S, PL, 'ros') - M.lineupTotal(otherIds, S, PL, 'ros');
     const gMeNow = M.lineupTotal(meAfter, S, PL, 'now') - M.lineupTotal(meIds, S, PL, 'now');
     const gThemNow = M.lineupTotal(otherAfter, S, PL, 'now') - M.lineupTotal(otherIds, S, PL, 'now');
     const tvGive = give.reduce((a, id) => a + tradeValue(ctx, P(ctx, id)), 0);
@@ -213,13 +221,13 @@ GM.engine = (() => {
     const tradeable = (team) => activeIds(team)
       .map((id) => P(ctx, id))
       .filter((p) => !p.unknown && p.pos !== 'K' && p.pos !== 'DEF')
-      .sort((a, b) => b.avg - a.avg)
+      .sort((a, b) => b.ros - a.ros)
       .slice(0, 13)
       .map((p) => p.id);
 
     const S = ctx.slots, PL = ctx.players;
     const meIds = activeIds(me);
-    const baseMe = M.lineupTotal(meIds, S, PL, 'avg');
+    const baseMe = M.lineupTotal(meIds, S, PL, 'ros');
     const mine = tradeable(me);
     const myGives = [...combos(mine, 1), ...combos(mine, 2)];
     const ideas = [];
@@ -227,7 +235,7 @@ GM.engine = (() => {
     for (const other of ctx.teams) {
       if (other.rosterId === me.rosterId) continue;
       const otherIds = activeIds(other);
-      const baseThem = M.lineupTotal(otherIds, S, PL, 'avg');
+      const baseThem = M.lineupTotal(otherIds, S, PL, 'ros');
       const theirs = tradeable(other);
       const theirGets = [...combos(theirs, 1), ...combos(theirs, 2)];
       const best = new Map();
@@ -240,10 +248,10 @@ GM.engine = (() => {
           if (give.length === 2 && get.length === 2) continue;
           const tvGet = get.reduce((a, id) => a + tradeValue(ctx, P(ctx, id)), 0);
           if (tvGet > tvGive * 1.12 + 0.5) continue; // they'd say no
-          const gMe = M.lineupTotal(meLess.concat(get), S, PL, 'avg') - baseMe;
+          const gMe = M.lineupTotal(meLess.concat(get), S, PL, 'ros') - baseMe;
           if (gMe < 0.4) continue;
           const getSet = new Set(get);
-          const gThem = M.lineupTotal(otherIds.filter((id) => !getSet.has(id)).concat(give), S, PL, 'avg') - baseThem;
+          const gThem = M.lineupTotal(otherIds.filter((id) => !getSet.has(id)).concat(give), S, PL, 'ros') - baseThem;
           if (gThem < -0.25) continue;
           const score = gMe + 0.5 * Math.min(gThem, 3) - 0.15 * Math.max(0, tvGive - tvGet) - 0.2 * (give.length + get.length - 2);
           const key = get.slice().sort().join('+');

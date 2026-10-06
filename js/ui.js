@@ -243,7 +243,7 @@ GM.ui = (() => {
 
   function tradeCard(ctx, t, { compact = false } = {}) {
     const other = ctx.byRoster.get(t.otherId);
-    const sideList = (ids) => `<ul>${ids.map((id) => { const p = E.P(ctx, id); return `<li>${pos(p)}<span class="pname">${esc(p.name)}</span><span class="num muted" style="margin-left:auto;font-size:.75rem">${f1(p.avg)}</span></li>`; }).join('')}</ul>`;
+    const sideList = (ids) => `<ul>${ids.map((id) => { const p = E.P(ctx, id); return `<li>${pos(p)}<span class="pname">${esc(p.name)}</span><span class="num muted" style="margin-left:auto;font-size:.75rem">${f1(p.ros)}</span></li>`; }).join('')}</ul>`;
     const vClass = { 'Win-win': 'chip-good', 'Fair value': 'chip-accent', 'Tough sell': 'chip-warn', 'Hurts you': 'chip-bad', Neutral: 'chip-neutral' }[t.verdict];
     return `<article class="trade">
       ${compact ? '' : `<div class="trade-top"><span class="trade-partner">${esc(other.name)}${other.owner !== other.name ? ` <span class="muted" style="font-weight:400">· ${esc(other.owner)}</span>` : ''}</span><span class="chip ${vClass}">${t.verdict}</span></div>`}
@@ -266,7 +266,7 @@ GM.ui = (() => {
   function tradesView(ctx, me, ideas, st) {
     const partners = ctx.teams.filter((t) => t.rosterId !== me.rosterId);
     const shown = st.partner === 'ALL' ? ideas : ideas.filter((t) => String(t.otherId) === st.partner);
-    const ideasHtml = `${head('Trade ideas', 'Deals that raise your best lineup without asking the other team to overpay', 'Trade desk')}
+    const ideasHtml = `${head('Trade ideas', `Deals that raise your best lineup for the rest of the season (weeks ${ctx.rosWeeks[0]}–${ctx.rosWeeks[ctx.rosWeeks.length - 1]}) without asking the other team to overpay`, 'Trade desk')}
       <div class="toolbar">
         <label class="field"><span>Partner</span><select id="trade-partner">
           <option value="ALL">All teams</option>
@@ -277,8 +277,8 @@ GM.ui = (() => {
         : empty('No ideas with this team', 'Their roster doesn’t line up with your needs right now.')}`;
 
     const other = ctx.byRoster.get(Number(st.otherId)) || partners[0];
-    const pickList = (team, side, set) => `<ul class="pick-list">${E.activeIds(team).map((id) => E.P(ctx, id)).sort((a, b) => b.avg - a.avg).map((p) => `
-      <li><label><input type="checkbox" data-side="${side}" value="${esc(p.id)}" ${set.has(p.id) ? 'checked' : ''}>${pos(p)}<span class="grow"><span class="pname" style="display:block">${esc(p.name)}</span><span class="pmeta">${esc(p.team || 'FA')} · value ${f1(E.tradeValue(ctx, p))}</span></span><span class="num muted" style="font-size:.8125rem">${p.unknown ? '—' : f1(p.avg)}</span></label></li>`).join('')}</ul>`;
+    const pickList = (team, side, set) => `<ul class="pick-list">${E.activeIds(team).map((id) => E.P(ctx, id)).sort((a, b) => b.ros - a.ros).map((p) => `
+      <li><label><input type="checkbox" data-side="${side}" value="${esc(p.id)}" ${set.has(p.id) ? 'checked' : ''}>${pos(p)}<span class="grow"><span class="pname" style="display:block">${esc(p.name)}</span><span class="pmeta">${esc(p.team || 'FA')} · value ${f1(E.tradeValue(ctx, p))}</span></span><span class="num muted" style="font-size:.8125rem">${p.unknown ? '—' : f1(p.ros)}</span></label></li>`).join('')}</ul>`;
 
     let verdict = '<p class="muted" style="margin:1rem 0 0;font-size:.875rem">Pick players on both sides to see how the deal changes each lineup.</p>';
     if (st.give.size && st.get.size) {
@@ -291,8 +291,8 @@ GM.ui = (() => {
         Neutral: 'Barely moves your lineup either way.',
       }[t.verdict];
       verdict = `<div class="verdict">
-        <div class="stat"><div class="label">You, per week</div><div class="value delta ${deltaCls(t.gMe)}">${signed(t.gMe)}</div><div class="sub">Wk ${ctx.targetWeek}: ${signed(t.gMeNow)}</div></div>
-        <div class="stat"><div class="label">Them, per week</div><div class="value delta ${deltaCls(t.gThem)}">${signed(t.gThem)}</div><div class="sub">Wk ${ctx.targetWeek}: ${signed(t.gThemNow)}</div></div>
+        <div class="stat"><div class="label">You, per week rest of season</div><div class="value delta ${deltaCls(t.gMe)}">${signed(t.gMe)}</div><div class="sub">Wk ${ctx.targetWeek}: ${signed(t.gMeNow)}</div></div>
+        <div class="stat"><div class="label">Them, per week rest of season</div><div class="value delta ${deltaCls(t.gThem)}">${signed(t.gThem)}</div><div class="sub">Wk ${ctx.targetWeek}: ${signed(t.gThemNow)}</div></div>
         <div class="stat"><div class="label">Value sent</div><div class="value num">${f1(t.tvGive)}</div><div class="sub">pts over replacement</div></div>
         <div class="stat"><div class="label">Value received</div><div class="value num">${f1(t.tvGet)}</div><div class="sub">pts over replacement</div></div>
         <div class="verdict-call"><span class="chip ${{ 'Win-win': 'chip-good', 'Fair value': 'chip-accent', 'Tough sell': 'chip-warn', 'Hurts you': 'chip-bad', Neutral: 'chip-neutral' }[t.verdict]}">${t.verdict}</span>${call}</div>
