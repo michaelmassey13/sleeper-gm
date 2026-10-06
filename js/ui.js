@@ -241,11 +241,14 @@ GM.ui = (() => {
 
   /* ---------------- Trades ---------------- */
 
+  // Rest-of-season average of the league's starters at the player's position, flex included.
+  const avgLine = (ctx, p) => (ctx.starterAvg[p.pos] != null ? `<small class="faint">${p.pos} avg ${f1(ctx.starterAvg[p.pos])}</small>` : '');
+
   const VERDICT_CLASS = { 'Win-win': 'chip-good', 'Fair value': 'chip-accent', 'Long shot': 'chip-warn', 'Tough sell': 'chip-warn', 'Hurts you': 'chip-bad', Neutral: 'chip-neutral' };
 
   function tradeCard(ctx, t, { compact = false } = {}) {
     const other = ctx.byRoster.get(t.otherId);
-    const sideList = (ids) => `<ul>${ids.map((id) => { const p = E.P(ctx, id); return `<li>${pos(p)}<span class="pname">${esc(p.name)}</span>${p.posRank ? `<span class="muted" style="font-size:.75rem;white-space:nowrap">${p.pos}${p.posRank}</span>` : ''}<span class="trade-val"><b>${f1(E.tradeValue(ctx, p))}</b><small>${p.unknown ? '—' : f1(p.ros)} pts</small></span></li>`; }).join('')}</ul>`;
+    const sideList = (ids) => `<ul>${ids.map((id) => { const p = E.P(ctx, id); return `<li>${pos(p)}<span class="pname">${esc(p.name)}</span>${p.posRank ? `<span class="muted" style="font-size:.75rem;white-space:nowrap">${p.pos}${p.posRank}</span>` : ''}<span class="trade-val"><b>${f1(E.tradeValue(ctx, p))}</b><small>${p.unknown ? '—' : f1(p.ros)} pts</small>${avgLine(ctx, p)}</span></li>`; }).join('')}</ul>`;
     const vClass = VERDICT_CLASS[t.verdict];
     return `<article class="trade">
       ${compact ? '' : `<div class="trade-top"><span class="trade-partner">${esc(other.name)}${other.owner !== other.name ? ` <span class="muted" style="font-weight:400">· ${esc(other.owner)}</span>` : ''}</span><span class="chip ${vClass}">${t.verdict}</span></div>`}
@@ -280,7 +283,7 @@ GM.ui = (() => {
 
     const other = ctx.byRoster.get(Number(st.otherId)) || partners[0];
     const pickList = (team, side, set) => `<ul class="pick-list">${E.activeIds(team).map((id) => E.P(ctx, id)).sort((a, b) => b.ros - a.ros).map((p) => `
-      <li><label><input type="checkbox" data-side="${side}" value="${esc(p.id)}" ${set.has(p.id) ? 'checked' : ''}>${pos(p)}<span class="grow"><span class="pname" style="display:block">${esc(p.name)}</span><span class="pmeta">${esc(p.team || 'FA')}${p.posRank ? ` · ${p.pos}${p.posRank}` : ''} · value ${f1(E.tradeValue(ctx, p))}</span></span><span class="num muted" style="font-size:.8125rem">${p.unknown ? '—' : f1(p.ros)}</span></label></li>`).join('')}</ul>`;
+      <li><label><input type="checkbox" data-side="${side}" value="${esc(p.id)}" ${set.has(p.id) ? 'checked' : ''}>${pos(p)}<span class="grow"><span class="pname" style="display:block">${esc(p.name)}</span><span class="pmeta">${esc(p.team || 'FA')}${p.posRank ? ` · ${p.pos}${p.posRank}` : ''} · value ${f1(E.tradeValue(ctx, p))}</span></span><span class="trade-val"><b>${p.unknown ? '—' : f1(p.ros)}</b>${avgLine(ctx, p)}</span></label></li>`).join('')}</ul>`;
 
     let verdict = '<p class="muted" style="margin:1rem 0 0;font-size:.875rem">Pick players on both sides to see how the deal changes each lineup.</p>';
     if (st.give.size && st.get.size) {

@@ -170,5 +170,25 @@ GM.model = (() => {
     return repl;
   }
 
-  return { ELIG, POSITIONS, SIDELINED, starterSlots, slotLabel, points, buildPlayers, setRestOfSeason, unknownPlayer, optimize, lineupTotal, replacementLevels };
+  /**
+   * Average output of the league's starters at each position: fill every team's starting
+   * slots league-wide (flex included) from the whole pool, then average whoever starts at each position.
+   */
+  function starterAverages(players, slots, nTeams, metric) {
+    const leagueSlots = slots.flatMap((s) => Array(nTeams).fill(s));
+    const sum = {}, n = {};
+    for (const s of optimize([...players.keys()], leagueSlots, players, metric).slots) {
+      if (!s.id) continue;
+      const p = players.get(s.id);
+      // Count the player at the position he starts at; a few listed positions differ from fantasy eligibility.
+      const pos = ELIG[s.slot].includes(p.pos) ? p.pos : p.elig.find((e) => ELIG[s.slot].includes(e));
+      sum[pos] = (sum[pos] || 0) + p[metric];
+      n[pos] = (n[pos] || 0) + 1;
+    }
+    const out = {};
+    for (const pos in sum) out[pos] = sum[pos] / n[pos];
+    return out;
+  }
+
+  return { ELIG, POSITIONS, SIDELINED, starterSlots, slotLabel, points, buildPlayers, setRestOfSeason, unknownPlayer, optimize, lineupTotal, replacementLevels, starterAverages };
 })();

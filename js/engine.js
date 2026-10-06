@@ -62,13 +62,12 @@ GM.engine = (() => {
     M.setRestOfSeason(players, replRos);
     // In 1-QB leagues, the average starting QB (one per team) anchors QB trade values.
     const oneQb = slots.filter((s) => M.ELIG[s].includes('QB')).length === 1;
-    const qbStarters = [...players.values()].filter((p) => p.pos === 'QB' && !p.unknown)
-      .sort((a, b) => b.ros - a.ros).slice(0, teams.length);
-    const qbAvg = oneQb && qbStarters.length ? qbStarters.reduce((a, p) => a + p.ros, 0) / qbStarters.length : null;
+    const starterAvg = M.starterAverages(players, slots, teams.length, 'ros');
+    const qbAvg = oneQb && starterAvg.QB != null ? starterAvg.QB : null;
     const rosterSize = league.roster_positions.filter((s) => s !== 'IR' && s !== 'TAXI').length;
 
     return {
-      league, season, targetWeek, weeks, rosWeeks, scoring, slots, players, teams, rosteredBy, repl, replRos, qbAvg, rosterSize,
+      league, season, targetWeek, weeks, rosWeeks, scoring, slots, players, teams, rosteredBy, repl, replRos, starterAvg, qbAvg, rosterSize,
       nflWeek: nflState.week,
       trendAdd: new Map(trendAdd.map((t) => [t.player_id, t.count])),
       trendDrop: new Map(trendDrop.map((t) => [t.player_id, t.count])),
