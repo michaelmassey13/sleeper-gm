@@ -223,7 +223,7 @@ GM.engine = (() => {
     const tvGet = get.reduce((a, id) => a + tradeValue(ctx, P(ctx, id)), 0);
     let verdict;
     if (gMe > 0.25 && gThem > 0.25) verdict = 'Win-win';
-    else if (gMe > 0.25 && tvGet <= tvGive * 1.12 + 0.5) verdict = 'Fair value';
+    else if (gMe > 0.25 && tvGet <= tvGive * 1.12 + 0.5) verdict = gThem >= 0 ? 'Fair value' : 'Long shot';
     else if (gMe > 0.25) verdict = 'Tough sell';
     else if (gMe < -0.25) verdict = 'Hurts you';
     else verdict = 'Neutral';

@@ -241,10 +241,12 @@ GM.ui = (() => {
 
   /* ---------------- Trades ---------------- */
 
+  const VERDICT_CLASS = { 'Win-win': 'chip-good', 'Fair value': 'chip-accent', 'Long shot': 'chip-warn', 'Tough sell': 'chip-warn', 'Hurts you': 'chip-bad', Neutral: 'chip-neutral' };
+
   function tradeCard(ctx, t, { compact = false } = {}) {
     const other = ctx.byRoster.get(t.otherId);
-    const sideList = (ids) => `<ul>${ids.map((id) => { const p = E.P(ctx, id); return `<li>${pos(p)}<span class="pname">${esc(p.name)}</span>${p.posRank ? `<span class="muted" style="font-size:.75rem;white-space:nowrap">${p.pos}${p.posRank}</span>` : ''}<span class="num muted" style="margin-left:auto;font-size:.75rem">${f1(p.ros)}</span></li>`; }).join('')}</ul>`;
-    const vClass = { 'Win-win': 'chip-good', 'Fair value': 'chip-accent', 'Tough sell': 'chip-warn', 'Hurts you': 'chip-bad', Neutral: 'chip-neutral' }[t.verdict];
+    const sideList = (ids) => `<ul>${ids.map((id) => { const p = E.P(ctx, id); return `<li>${pos(p)}<span class="pname">${esc(p.name)}</span>${p.posRank ? `<span class="muted" style="font-size:.75rem;white-space:nowrap">${p.pos}${p.posRank}</span>` : ''}<span class="trade-val"><b>${f1(E.tradeValue(ctx, p))}</b><small>${p.unknown ? '—' : f1(p.ros)} pts</small></span></li>`; }).join('')}</ul>`;
+    const vClass = VERDICT_CLASS[t.verdict];
     return `<article class="trade">
       ${compact ? '' : `<div class="trade-top"><span class="trade-partner">${esc(other.name)}${other.owner !== other.name ? ` <span class="muted" style="font-weight:400">· ${esc(other.owner)}</span>` : ''}</span><span class="chip ${vClass}">${t.verdict}</span></div>`}
       <div class="trade-sides">
@@ -256,7 +258,7 @@ GM.ui = (() => {
         <div class="trade-metrics">
           <span>You <b class="delta ${deltaCls(t.gMe)}">${signed(t.gMe)}</b>/wk</span>
           <span>Them <b class="delta ${deltaCls(t.gThem)}">${signed(t.gThem)}</b>/wk</span>
-          <span>Value <b>${f1(t.tvGive)}</b> for <b>${f1(t.tvGet)}</b></span>
+          <span>Trade value <b>${f1(t.tvGive)}</b> for <b>${f1(t.tvGet)}</b></span>
         </div>
         ${compact ? `<span class="chip ${vClass}">${t.verdict}</span>` : `<button type="button" class="btn-ghost" data-load-trade='${esc(JSON.stringify({ o: t.otherId, g: t.give, r: t.get }))}'>Open in builder</button>`}
       </div>
@@ -286,6 +288,7 @@ GM.ui = (() => {
       const call = {
         'Win-win': 'Both lineups get better. Good one to send.',
         'Fair value': 'You get better and the value is fair. They may need a nudge.',
+        'Long shot': 'Fair on value, but their lineup gets a little worse, so they have little reason to say yes.',
         'Tough sell': 'Helps you, but they give up more value than they get.',
         'Hurts you': 'Your best lineup gets worse. Pass.',
         Neutral: 'Barely moves your lineup either way.',
@@ -295,7 +298,7 @@ GM.ui = (() => {
         <div class="stat"><div class="label">Them, per week rest of season</div><div class="value delta ${deltaCls(t.gThem)}">${signed(t.gThem)}</div><div class="sub">Wk ${ctx.targetWeek}: ${signed(t.gThemNow)}</div></div>
         <div class="stat"><div class="label">Value sent</div><div class="value num">${f1(t.tvGive)}</div><div class="sub">pts over replacement</div></div>
         <div class="stat"><div class="label">Value received</div><div class="value num">${f1(t.tvGet)}</div><div class="sub">pts over replacement</div></div>
-        <div class="verdict-call"><span class="chip ${{ 'Win-win': 'chip-good', 'Fair value': 'chip-accent', 'Tough sell': 'chip-warn', 'Hurts you': 'chip-bad', Neutral: 'chip-neutral' }[t.verdict]}">${t.verdict}</span>${call}</div>
+        <div class="verdict-call"><span class="chip ${VERDICT_CLASS[t.verdict]}">${t.verdict}</span>${call}</div>
       </div>`;
     }
 

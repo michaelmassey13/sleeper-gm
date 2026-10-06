@@ -306,6 +306,9 @@ tr.is-change td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .trade-side h4 { margin: 0 0 0.4rem; font-size: 0.625rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
 .trade-side ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.4rem; }
 .trade-side li { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+.trade-val { margin-left: auto; display: grid; justify-items: end; line-height: 1.15; font-family: var(--f-mono); white-space: nowrap; }
+.trade-val b { font-weight: 500; font-size: 0.8125rem; }
+.trade-val small { font-size: 0.6875rem; color: var(--muted); }
 .trade-foot { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center; justify-content: space-between; font-size: 0.8125rem; }
 .trade-metrics { display: flex; flex-wrap: wrap; gap: 0.4rem 1.25rem; color: var(--muted); }
 .trade-metrics b { font-family: var(--f-mono); font-weight: 500; }
