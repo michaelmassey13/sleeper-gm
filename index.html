@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Sleeper GM</title>
+  <meta name="description" content="Lineup, waiver and trade assistant for Sleeper fantasy football leagues.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="masthead">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M4 26 L16 4 L28 26 Z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 26 L16 15 L22 26" fill="var(--accent)" stroke="none"/></svg>
+      <div>
+        <p class="eyebrow">Sleeper GM</p>
+        <h1 id="league-title" class="league-title">Loading league…</h1>
+      </div>
+    </div>
+
+    <form class="controls" id="controls" aria-label="League, team and week">
+      <label class="field">
+        <span>League</span>
+        <select id="sel-league" disabled></select>
+      </label>
+      <label class="field">
+        <span>Team</span>
+        <select id="sel-team" disabled></select>
+      </label>
+      <label class="field field-narrow">
+        <span>Week</span>
+        <select id="sel-week" disabled></select>
+      </label>
+      <button type="button" class="btn-island" id="btn-refresh">
+        <span>Refresh</span>
+        <span class="btn-island-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M16 10a6 6 0 1 1-1.8-4.3M16 3v3.5h-3.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      </button>
+    </form>
+  </header>
+
+  <nav class="tabbar" aria-label="Sections">
+    <div class="tabbar-pill" role="tablist" id="tablist">
+      <button role="tab" id="tab-overview" aria-controls="panel" aria-selected="true" data-tab="overview">Overview</button>
+      <button role="tab" id="tab-lineup" aria-controls="panel" aria-selected="false" data-tab="lineup">Lineup</button>
+      <button role="tab" id="tab-waivers" aria-controls="panel" aria-selected="false" data-tab="waivers">Waivers</button>
+      <button role="tab" id="tab-trades" aria-controls="panel" aria-selected="false" data-tab="trades">Trades</button>
+      <button role="tab" id="tab-league" aria-controls="panel" aria-selected="false" data-tab="league">League</button>
+    </div>
+  </nav>
+
+  <main id="panel" role="tabpanel" aria-live="polite" tabindex="-1">
+    <div class="skeleton-grid" aria-busy="true" aria-label="Loading league data">
+      <div class="sk sk-wide"></div><div class="sk"></div><div class="sk"></div><div class="sk"></div>
+    </div>
+  </main>
+
+  <footer class="foot">
+    <p>Live data from Sleeper. Projections are Sleeper's own, re-scored with your league's settings. <span id="foot-updated"></span></p>
+    <p><button type="button" class="linkish" id="btn-account">Change Sleeper account</button></p>
+  </footer>
+
+  <dialog id="account-dialog" class="sheet" aria-labelledby="account-title">
+    <form method="dialog" id="account-form" class="sheet-inner">
+      <h2 id="account-title">Sleeper account</h2>
+      <p class="muted">Enter a Sleeper username. The app loads every league that account is in this season.</p>
+      <label class="field field-block" for="account-input">
+        <span>Username</span>
+        <input id="account-input" autocomplete="off" spellcheck="false" placeholder="cmichaelmassey">
+      </label>
+      <p class="form-error" id="account-error" role="alert" hidden></p>
+      <div class="sheet-actions">
+        <button type="button" class="btn-ghost" value="cancel" id="account-cancel">Cancel</button>
+        <button type="submit" class="btn-solid" id="account-save">Load leagues</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="js/api.js"></script>
+  <script src="js/model.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
