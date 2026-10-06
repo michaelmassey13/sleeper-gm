@@ -98,6 +98,12 @@ GM.model = (() => {
       const fill = replRos[p.pos] || 0;
       p.ros = p.series.length ? p.series.reduce((a, v) => a + (v > 0 ? v : fill), 0) / p.series.length : 0;
     }
+    // Positional rank by rest-of-season output (QB1 = best QB).
+    for (const pos of POSITIONS) {
+      [...players.values()].filter((p) => p.pos === pos && !p.unknown)
+        .sort((a, b) => b.ros - a.ros)
+        .forEach((p, i) => { p.posRank = i + 1; });
+    }
   }
 
   // Placeholder for rostered players the projection feed doesn't cover (deep IR, practice squad).

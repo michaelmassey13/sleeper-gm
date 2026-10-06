@@ -60,10 +60,15 @@ GM.engine = (() => {
     const repl = M.replacementLevels(players, slots, teams.length);
     const replRos = M.replacementLevels(players, slots, teams.length, 'rosRaw');
     M.setRestOfSeason(players, replRos);
+    // In 1-QB leagues, the average starting QB (one per team) anchors QB trade values.
+    const oneQb = slots.filter((s) => M.ELIG[s].includes('QB')).length === 1;
+    const qbStarters = [...players.values()].filter((p) => p.pos === 'QB' && !p.unknown)
+      .sort((a, b) => b.ros - a.ros).slice(0, teams.length);
+    const qbAvg = oneQb && qbStarters.length ? qbStarters.reduce((a, p) => a + p.ros, 0) / qbStarters.length : null;
     const rosterSize = league.roster_positions.filter((s) => s !== 'IR' && s !== 'TAXI').length;
 
     return {
-      league, season, targetWeek, weeks, rosWeeks, scoring, slots, players, teams, rosteredBy, repl, replRos, rosterSize,
+      league, season, targetWeek, weeks, rosWeeks, scoring, slots, players, teams, rosteredBy, repl, replRos, qbAvg, rosterSize,
       nflWeek: nflState.week,
       trendAdd: new Map(trendAdd.map((t) => [t.player_id, t.count])),
       trendDrop: new Map(trendDrop.map((t) => [t.player_id, t.count])),
@@ -81,7 +86,22 @@ GM.engine = (() => {
    * Trade value: rest-of-season points per week above replacement, plus a little credit
    * for raw volume so depth isn't worth zero. Missed weeks are already filled at replacement level in p.ros.
    */
-  const tradeValue = (ctx, p) => (p.unknown ? 0 : Math.max(0, p.ros - (ctx.replRos[p.pos] || 0)) + 0.1 * p.rosRaw);
+  const tradeValue = (ctx, p) => {
+    if (p.unknown) return 0;
+    const repl = ctx.replRos[p.pos] || 0;
+    return Math.max(0, p.pos === 'QB' && ctx.qbAvg != null ? qbOverRepl(p.ros, repl, ctx.qbAvg) : p.ros - repl) + 0.1 * p.rosRaw;
+  };
+
+  // Share of a 1-QB league's QB points between waiver level and the average starter that counts.
+  const QB_DISCOUNT = 0.5;
+  /**
+   * In a 1-QB league nearly every team already starts an average QB, so points up to that
+   * level are only worth QB_DISCOUNT of their face value. Points above the average starter count in full.
+   */
+  function qbOverRepl(ros, repl, avg) {
+    const mid = Math.max(avg, repl);
+    return QB_DISCOUNT * (Math.min(ros, mid) - repl) + Math.max(0, ros - mid);
+  }
 
   /* ---------------- Lineup ---------------- */
 

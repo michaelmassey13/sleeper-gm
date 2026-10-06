@@ -278,7 +278,7 @@ GM.ui = (() => {
 
     const other = ctx.byRoster.get(Number(st.otherId)) || partners[0];
     const pickList = (team, side, set) => `<ul class="pick-list">${E.activeIds(team).map((id) => E.P(ctx, id)).sort((a, b) => b.ros - a.ros).map((p) => `
-      <li><label><input type="checkbox" data-side="${side}" value="${esc(p.id)}" ${set.has(p.id) ? 'checked' : ''}>${pos(p)}<span class="grow"><span class="pname" style="display:block">${esc(p.name)}</span><span class="pmeta">${esc(p.team || 'FA')} · value ${f1(E.tradeValue(ctx, p))}</span></span><span class="num muted" style="font-size:.8125rem">${p.unknown ? '—' : f1(p.ros)}</span></label></li>`).join('')}</ul>`;
+      <li><label><input type="checkbox" data-side="${side}" value="${esc(p.id)}" ${set.has(p.id) ? 'checked' : ''}>${pos(p)}<span class="grow"><span class="pname" style="display:block">${esc(p.name)}</span><span class="pmeta">${esc(p.team || 'FA')}${p.posRank ? ` · ${p.pos}${p.posRank}` : ''} · value ${f1(E.tradeValue(ctx, p))}</span></span><span class="num muted" style="font-size:.8125rem">${p.unknown ? '—' : f1(p.ros)}</span></label></li>`).join('')}</ul>`;
 
     let verdict = '<p class="muted" style="margin:1rem 0 0;font-size:.875rem">Pick players on both sides to see how the deal changes each lineup.</p>';
     if (st.give.size && st.get.size) {
