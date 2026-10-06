@@ -243,7 +243,7 @@ GM.ui = (() => {
 
   function tradeCard(ctx, t, { compact = false } = {}) {
     const other = ctx.byRoster.get(t.otherId);
-    const sideList = (ids) => `<ul>${ids.map((id) => { const p = E.P(ctx, id); return `<li>${pos(p)}<span class="pname">${esc(p.name)}</span><span class="num muted" style="margin-left:auto;font-size:.75rem">${f1(p.ros)}</span></li>`; }).join('')}</ul>`;
+    const sideList = (ids) => `<ul>${ids.map((id) => { const p = E.P(ctx, id); return `<li>${pos(p)}<span class="pname">${esc(p.name)}</span>${p.posRank ? `<span class="muted" style="font-size:.75rem;white-space:nowrap">${p.pos}${p.posRank}</span>` : ''}<span class="num muted" style="margin-left:auto;font-size:.75rem">${f1(p.ros)}</span></li>`; }).join('')}</ul>`;
     const vClass = { 'Win-win': 'chip-good', 'Fair value': 'chip-accent', 'Tough sell': 'chip-warn', 'Hurts you': 'chip-bad', Neutral: 'chip-neutral' }[t.verdict];
     return `<article class="trade">
       ${compact ? '' : `<div class="trade-top"><span class="trade-partner">${esc(other.name)}${other.owner !== other.name ? ` <span class="muted" style="font-weight:400">· ${esc(other.owner)}</span>` : ''}</span><span class="chip ${vClass}">${t.verdict}</span></div>`}
